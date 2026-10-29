@@ -388,7 +388,6 @@ class SceneCardsApp(tk.Tk):
         save_config(self.cfg)
         self._apply_fonts()
         self._apply_window_attrs()
-        self._apply_window_attrs()
         self._start_source()
 
     def _quit(self):
