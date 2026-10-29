@@ -141,15 +141,15 @@ class SceneCardsApp(tk.Tk):
         bar.pack(fill="x", side="bottom")
         self.dot = tk.Label(bar, text="●", bg="#0c0c0c", fg=BAD)
         self.dot.pack(side="left", padx=(10, 2))
-        self.status_lbl = tk.Label(bar, textvariable=self.status_var, bg="#0c0c0c",
-                                   fg=FG_DIM, anchor="w")
-        self.status_lbl.pack(side="left", fill="x", expand=True)
         gear = tk.Label(bar, text="⚙", bg="#0c0c0c", fg=FG_DIM, cursor="hand2")
         gear.pack(side="right", padx=8)
         gear.bind("<Button-1>", lambda e: self.open_settings())
         self.pin_lbl = tk.Label(bar, text="on top", bg="#0c0c0c", fg=FG_DIM, cursor="hand2")
         self.pin_lbl.pack(side="right", padx=4)
         self.pin_lbl.bind("<Button-1>", lambda e: self.toggle_topmost())
+        self.status_lbl = tk.Label(bar, textvariable=self.status_var, bg="#0c0c0c",
+                                   fg=FG_DIM, anchor="w")
+        self.status_lbl.pack(side="left", fill="x", expand=True)
 
         self.menu = tk.Menu(self, tearoff=0)
         self.menu.add_command(label="Settings...", command=self.open_settings)
