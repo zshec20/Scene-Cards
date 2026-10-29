@@ -1,0 +1,30 @@
+{
+  "title": "Example Set",
+  "songs": [
+    {
+      "scene": 1,
+      "title": "Walk On",
+      "notes": "House music from playback.\nAll vocal mics muted."
+    },
+    {
+      "scene": 2,
+      "title": "Opener",
+      "notes": "Unmute vox 1-3 on count-in.\nGuitar solo at 2:10 -> +3 dB on GTR 1."
+    },
+    {
+      "scene": 3,
+      "title": "Second Song",
+      "notes": "Acoustic intro: only vox 1 + AC GTR.\nFull band drops at verse 2."
+    },
+    {
+      "scene": 4,
+      "title": "Ballad",
+      "notes": "Long reverb on lead vox (FX 2).\nWatch the keys - quiet pad, bring up."
+    },
+    {
+      "scene": 5,
+      "title": "Closer",
+      "notes": "Delay throw on last 'goodnight'.\nMute everything after final hit."
+    }
+  ]
+}
