@@ -141,7 +141,7 @@ class SceneCardsApp(tk.Tk):
         bar.pack(fill="x", side="bottom")
         self.dot = tk.Label(bar, text="●", bg="#0c0c0c", fg=BAD)
         self.dot.pack(side="left", padx=(10, 2))
-        gear = tk.Label(bar, text="⚙", bg="#0c0c0c", fg=FG_DIM, cursor="hand2")
+        gear = tk.Label(bar, text="settings", bg="#0c0c0c", fg=FG_DIM, cursor="hand2")
         gear.pack(side="right", padx=8)
         gear.bind("<Button-1>", lambda e: self.open_settings())
         self.pin_lbl = tk.Label(bar, text="on top", bg="#0c0c0c", fg=FG_DIM, cursor="hand2")
@@ -173,6 +173,7 @@ class SceneCardsApp(tk.Tk):
 
         self.bind("<Configure>", self._on_resize)
         self._apply_fonts()
+        self._apply_window_attrs()
 
     def _popup(self, event):
         try:
@@ -282,6 +283,7 @@ class SceneCardsApp(tk.Tk):
         s = min(3.0, max(0.5, float(self.cfg.get("font_scale", 1.0)) * factor))
         self.cfg["font_scale"] = round(s, 3)
         self._apply_fonts()
+        self._apply_window_attrs()
         save_config(self.cfg)
 
     def toggle_topmost(self):
@@ -385,6 +387,7 @@ class SceneCardsApp(tk.Tk):
         self.cfg.update(new_cfg)
         save_config(self.cfg)
         self._apply_fonts()
+        self._apply_window_attrs()
         self._apply_window_attrs()
         self._start_source()
 
