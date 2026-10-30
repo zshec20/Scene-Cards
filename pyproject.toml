@@ -9,15 +9,21 @@ description = "Always-on-top set list note card that follows Allen & Heath dLive
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "Zach" }]
-dependencies = [
-    "mido>=1.3",
-    "python-rtmidi>=1.5",
-]
+# The direct dLive network connection (TCP) needs nothing extra.
+dependencies = []
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: MacOS",
     "Operating System :: Microsoft :: Windows",
     "Topic :: Multimedia :: Sound/Audio :: MIDI",
+]
+
+[project.optional-dependencies]
+# Only for listening to a MIDI port (RTP-MIDI session, A&H MIDI driver, USB).
+# python-rtmidi ships ready-made downloads for Python 3.8-3.12 only.
+midi = [
+    "mido>=1.3",
+    "python-rtmidi>=1.5",
 ]
 
 [project.urls]

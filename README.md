@@ -38,6 +38,20 @@ Works on macOS and Windows.
    python3 -m pip install https://github.com/zshec20/Scene-Cards/archive/refs/heads/main.zip
    ```
 
+   That is all you need for the direct dLive network connection (option A below).
+   To also listen to a MIDI port (option B: RTP-MIDI, the A&H MIDI driver, USB),
+   install the MIDI add-on:
+
+   ```
+   python3 -m pip install "scene-cards[midi] @ git+https://github.com/zshec20/Scene-Cards.git"
+   ```
+
+   The MIDI add-on uses `python-rtmidi`, which only has ready-made downloads for
+   Python 3.8 to 3.12. On Python 3.13 or newer, pip tries to build it and usually
+   fails. If you need MIDI-port mode, install Python 3.12 from python.org
+   (scroll down to "Looking for a specific release?") and use `python3.12` in place
+   of `python3` in these commands.
+
 3. Start it:
 
    ```
@@ -166,8 +180,9 @@ Window size and position are remembered between runs (saved in `config.json`).
 
 ## Troubleshooting
 
-- **"MIDI library not available"**: run `pip install mido python-rtmidi`. TCP mode
-  works without it.
+- **"MIDI library not available"**: you're in MIDI-port mode without the MIDI add-on.
+  Either switch Settings to *dLive over the network*, which needs nothing extra, or
+  install the add-on as shown in step 2 of Install.
 - **`scene-cards: command not found`**: run `python3 -m scene_cards` instead. Or quit
   and reopen Terminal, which picks up the newly installed command.
 - **pip says "externally-managed-environment"** (Homebrew Python): use the python.org
