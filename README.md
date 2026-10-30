@@ -20,9 +20,18 @@ Works on macOS and Windows.
 
 ## 1. Install
 
-1. Install Python 3 from <https://www.python.org/downloads/> if you don't have it
-   (the python.org installer includes Tk, which draws the window).
-2. Download or clone this folder (`scene-cards`).
+1. Install Python 3 from <https://www.python.org/downloads/>. The python.org installer
+   includes Tk, which draws the window.
+   On a Mac, do this even if `python3 --version` already works: Apple's built-in
+   Python 3.9 ships an old Tk that often draws blank or glitchy windows. After
+   installing, run *Install Certificates.command* from the Finder window that opens.
+2. Download this repo: on <https://github.com/zshec20/scene-cards> click the green
+   **Code** button, then **Download ZIP**, and unzip it. Or clone it:
+
+   ```
+   git clone https://github.com/zshec20/scene-cards.git
+   ```
+
 3. Double-click **Start Scene Cards.command** (Mac) or **Start Scene Cards.bat**
    (Windows). The first run installs the two MIDI libraries, then opens the card.
 
@@ -30,7 +39,7 @@ Works on macOS and Windows.
    or in Terminal run:
 
    ```
-   cd path/to/scene-cards
+   cd ~/Desktop/scene-cards
    chmod +x "Start Scene Cards.command"
    ```
 
