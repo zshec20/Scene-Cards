@@ -26,9 +26,10 @@ except ImportError:  # pragma: no cover
           "Or install Python from python.org, which includes it.")
     sys.exit(1)
 
-from scene_cards.midi_events import (MidiEvent, MidiParser, PortSource, TcpSource,
+from scene_cards.midi_events import (BUSY_CCS, MidiEvent, MidiParser, PortSource, TcpSource,
                          list_midi_ports, midi_library_error)
 from scene_cards.setlist import Setlist, SetlistError, write_example
+from scene_cards.editor import SetlistEditor
 
 from scene_cards import __version__
 
@@ -121,6 +122,9 @@ class SceneCardsApp(tk.Tk):
         self._connected = False
         self._status_text = "Starting..."
         self._last_midi = ""
+        self.last_event = None      # last scene / note from the console, for the editor
+        self.editor = None
+        self._unknown_scene = None  # scene number showing as "No card for this scene"
 
         self.topmost_var = tk.BooleanVar(value=bool(self.cfg.get("topmost", True)))
         self.title("Scene Cards")
@@ -143,7 +147,7 @@ class SceneCardsApp(tk.Tk):
         self.title_var = tk.StringVar(value="Scene Cards")
         self.notes_var = tk.StringVar(
             value="Waiting for the console...\n\n"
-                  "Right-click for settings. Edit setlist.json to add songs.")
+                  "Double-click this card to edit your songs. Right-click for settings.")
         self.footer_var = tk.StringVar(value="")
         self.status_var = tk.StringVar(value=self._status_text)
 
@@ -176,7 +180,8 @@ class SceneCardsApp(tk.Tk):
 
         self.menu = tk.Menu(self, tearoff=0)
         self.menu.add_command(label="Settings...", command=self.open_settings)
-        self.menu.add_command(label="Edit set list (setlist.json)",
+        self.menu.add_command(label="Edit set list...  (e)", command=self.open_editor)
+        self.menu.add_command(label="Open setlist.json in a text editor",
                               command=lambda: open_in_editor(SETLIST_PATH))
         self.menu.add_command(label="Reload set list", command=self._load_setlist)
         self.menu.add_command(label="Show set list folder", command=lambda: open_in_editor(DATA_DIR))
@@ -194,6 +199,7 @@ class SceneCardsApp(tk.Tk):
             w.bind("<Button-3>", self._popup)
             w.bind("<Button-2>", self._popup)       # macOS middle / ctrl-click
             w.bind("<Control-Button-1>", self._popup)
+            w.bind("<Double-Button-1>", lambda e: self.open_editor())
 
         self.bind("<Configure>", self._on_resize)
         self._apply_fonts()
@@ -214,7 +220,7 @@ class SceneCardsApp(tk.Tk):
         self.bind("<KeyPress-p>", lambda e: self.toggle_topmost())
         self.bind("<KeyPress-r>", lambda e: self._load_setlist())
         self.bind("<KeyPress-s>", lambda e: self.open_settings())
-        self.bind("<KeyPress-e>", lambda e: open_in_editor(SETLIST_PATH))
+        self.bind("<KeyPress-e>", lambda e: self.open_editor())
 
     def _apply_fonts(self):
         s = float(self.cfg.get("font_scale", 1.0))
@@ -244,13 +250,13 @@ class SceneCardsApp(tk.Tk):
 
     # ------------------------------------------------------------ set list
 
-    def _load_setlist(self, first=False):
+    def _load_setlist(self, first=False, notice="Set list reloaded"):
         write_example(SETLIST_PATH)
         try:
             self.setlist = Setlist.load(SETLIST_PATH)
             self._setlist_mtime = os.path.getmtime(SETLIST_PATH)
             if not first:
-                self._flash("Set list reloaded (%d songs)" % len(self.setlist))
+                self._flash("%s (%d songs)" % (notice, len(self.setlist)))
             # keep showing the same song if it still exists
             if self.current is not None and self.current.index < len(self.setlist):
                 self.show_song(self.setlist.songs[self.current.index])
@@ -258,7 +264,7 @@ class SceneCardsApp(tk.Tk):
             self._setlist_mtime = os.path.getmtime(SETLIST_PATH) if os.path.exists(SETLIST_PATH) else None
             self.title_var.set("Set list problem")
             self.notes_var.set(str(e))
-            self.footer_var.set("Fix setlist.json and save - it reloads automatically.")
+            self.footer_var.set("Double-click to open the editor, or fix setlist.json and save.")
 
     def _watch_setlist(self):
         try:
@@ -273,9 +279,11 @@ class SceneCardsApp(tk.Tk):
 
     def show_song(self, song):
         self.current = song
+        self._unknown_scene = None
         self.title_var.set(song.title)
         self.notes_var.set(song.notes or "(no notes)")
-        parts = ["%s" % song.trigger_label().capitalize(),
+        label = song.trigger_label()
+        parts = [label[:1].upper() + label[1:],
                  "%d / %d" % (song.index + 1, len(self.setlist))]
         nxt = self.setlist.next_after(song)
         parts.append("Next: %s" % nxt.title if nxt else "Last song")
@@ -284,10 +292,10 @@ class SceneCardsApp(tk.Tk):
     def show_unknown(self, event):
         self.current = None
         if event.kind == "scene":
+            self._unknown_scene = event.number
             self.title_var.set("Scene %d" % event.number)
             self.notes_var.set("No card for this scene.\n\n"
-                               "Add  {\"scene\": %d, \"title\": \"...\", \"notes\": \"...\"}  to setlist.json"
-                               % event.number)
+                               "Double-click to add a card for scene %d." % event.number)
         else:
             self.title_var.set(event.describe())
             self.notes_var.set("No card for this message.")
@@ -382,9 +390,12 @@ class SceneCardsApp(tk.Tk):
         want_ch = int(self.cfg.get("channel", 0) or 0)
         if want_ch and event.channel != want_ch:
             return
-        if event.kind in ("scene", "note"):
+        if event.kind in ("scene", "note") or (event.kind == "cc" and event.number not in BUSY_CCS):
             self._last_midi = event.describe()
+            self.last_event = event
             self._refresh_status()
+            if self.editor is not None:
+                self.editor.on_midi(event)
         if event.kind == "program":
             return   # the parser sends a "scene" event right after; handled there
         if event.kind == "scene":
@@ -396,11 +407,37 @@ class SceneCardsApp(tk.Tk):
                 self.show_song(song)
             else:
                 self.show_unknown(event)
-        elif event.kind == "note":
+        elif event.kind in ("note", "cc"):
             song = self.setlist.find(event)
             if song is not None:
                 self.show_song(song)
-            # unmatched notes are ignored: dLive also sends notes for mutes etc.
+            # unmatched notes / CCs are ignored: dLive also sends them for mutes, faders etc.
+
+    # ------------------------------------------------------------ editor
+
+    def open_editor(self):
+        """Open the set list editor on the song that's showing (or a new card
+        for an unknown scene that just arrived)."""
+        new_scene = self._unknown_scene
+        if self.editor is None or not self.editor.winfo_exists():
+            idx = self.current.index if self.current is not None else None
+            self.editor = SetlistEditor(self, SETLIST_PATH, idx)
+            if not self.editor.winfo_exists() or not hasattr(self.editor, "rows"):
+                self.editor = None
+                return
+        else:
+            self.editor.lift()
+            self.editor.focus_force()
+            if self.current is not None and self.current.index < len(self.editor.rows):
+                self.editor._commit()
+                self.editor.select(self.current.index)
+        if new_scene is not None:
+            self.editor.add(scene=new_scene)
+
+    def after_editor_save(self, idx):
+        self._load_setlist(notice="Set list saved")
+        if idx is not None and idx < len(self.setlist):
+            self.show_song(self.setlist.songs[idx])
 
     # ------------------------------------------------------------ settings
 
@@ -476,12 +513,12 @@ class SettingsDialog(tk.Toplevel):
 
         ttk.Label(f, foreground="#666", justify="left", text=(
             "Keys:  Left/Right = step through songs    +/- = text size    "
-            "p = pin on top    e = edit set list    r = reload")).grid(
+            "p = pin on top    e or double-click = edit set list")).grid(
             row=9, column=0, columnspan=3, sticky="w", pady=(10, 0))
 
         btns = ttk.Frame(f)
         btns.grid(row=10, column=0, columnspan=3, sticky="e", pady=(12, 0))
-        ttk.Button(btns, text="Edit set list...", command=lambda: open_in_editor(SETLIST_PATH)).pack(side="left", padx=4)
+        ttk.Button(btns, text="Edit set list...", command=lambda: (self.destroy(), app.open_editor())).pack(side="left", padx=4)
         ttk.Button(btns, text="Cancel", command=self.destroy).pack(side="left", padx=4)
         ttk.Button(btns, text="Save", command=self.save).pack(side="left", padx=4)
 

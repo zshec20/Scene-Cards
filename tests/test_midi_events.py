@@ -75,6 +75,23 @@ class SetlistTests(unittest.TestCase):
         self.assertIsNone(sl.next_after(songs[2]))
         self.assertEqual(sl.prev_before(songs[1]).title, "A")
 
+    def test_cc_triggers(self):
+        any_value = Song(0, {"cc": 20, "title": "Any"})
+        exact = Song(1, {"cc": 21, "value": 5, "title": "Exact"})
+        self.assertTrue(any_value.matches(MidiEvent("cc", 1, 20, 127)))
+        self.assertFalse(any_value.matches(MidiEvent("cc", 1, 20, 0)))      # button release
+        self.assertFalse(any_value.matches(MidiEvent("cc", 1, 22, 127)))
+        self.assertTrue(exact.matches(MidiEvent("cc", 1, 21, 5)))
+        self.assertFalse(exact.matches(MidiEvent("cc", 1, 21, 6)))
+        self.assertFalse(exact.matches(MidiEvent("note", 1, 21, 5)))
+        # one CC number, a different value per song: jumping around picks the right one
+        sl = Setlist([Song(i, {"cc": 30, "value": i + 1, "title": "Song %d" % (i + 1)})
+                      for i in range(5)])
+        self.assertEqual(sl.find(MidiEvent("cc", 1, 30, 4)).title, "Song 4")
+        self.assertEqual(sl.find(MidiEvent("cc", 1, 30, 2)).title, "Song 2")
+        self.assertEqual(exact.trigger_label(), "CC 21 = 5")
+        self.assertEqual(exact.to_dict(), {"cc": 21, "title": "Exact", "notes": "", "value": 5})
+
     def test_song_needs_a_trigger(self):
         with self.assertRaises(SetlistError):
             Song(0, {"title": "No trigger"})
@@ -97,6 +114,31 @@ class SetlistTests(unittest.TestCase):
             self.assertIn("typo", str(cm.exception))
             with self.assertRaises(SetlistError):
                 Setlist.load(os.path.join(d, "missing.json"))
+
+
+class SaveTests(unittest.TestCase):
+    def test_save_round_trip_keeps_every_field(self):
+        import json, os, tempfile
+        raw = {"title": "Red Rocks", "songs": [
+            {"scene": 4, "title": "Last Night", "notes": "OG key \u00b7 6:00\nDrums: up"},
+            {"note": 60, "channel": 2, "title": "Encore", "notes": ""},
+            {"program": 7, "title": "Walk in"},
+        ]}
+        with tempfile.TemporaryDirectory() as d:
+            p = os.path.join(d, "setlist.json")
+            with open(p, "w", encoding="utf-8") as f:
+                json.dump(raw, f)
+            Setlist.load(p).save(p)
+            again = Setlist.load(p)
+            self.assertEqual(again.title, "Red Rocks")
+            self.assertEqual([s.to_dict() for s in again.songs], [
+                {"scene": 4, "title": "Last Night", "notes": "OG key \u00b7 6:00\nDrums: up"},
+                {"note": 60, "title": "Encore", "notes": "", "channel": 2},
+                {"program": 7, "title": "Walk in", "notes": ""},
+            ])
+            with open(p, encoding="utf-8") as f:
+                self.assertIn("\u00b7", f.read())          # stays readable, not \\u00b7
+            self.assertEqual(os.listdir(d), ["setlist.json"])  # temp file cleaned up
 
 
 class TcpSourceTests(unittest.TestCase):

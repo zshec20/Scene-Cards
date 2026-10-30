@@ -24,6 +24,12 @@ import socket
 import threading
 
 
+# Controllers the dLive (and most consoles) use for housekeeping: Bank Select
+# and the NRPN messages it sends for fader and parameter moves. They change
+# constantly while you mix, so they make poor song triggers.
+BUSY_CCS = frozenset([0, 6, 32, 38, 96, 97, 98, 99, 100, 101])
+
+
 @dataclass(frozen=True)
 class MidiEvent:
     kind: str       # "scene", "program", "note", "cc"

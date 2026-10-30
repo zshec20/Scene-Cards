@@ -15,6 +15,9 @@ Each song needs a "title" and ONE trigger:
     "scene":   dLive scene number (1..500)          <- normal case
     "note":    MIDI note number (0..127)
     "program": raw Program Change number (0..127), ignoring bank
+    "cc":      MIDI Control Change number (0..127). Add "value": 0..127 to match
+               only that value (e.g. one CC, a different value per song);
+               without "value" any value above 0 matches.
 Optional: "channel": 1..16 to only match that MIDI channel.
 Optional: "notes": the text shown on the card (use \n for line breaks).
 """
@@ -36,7 +39,7 @@ class Song:
         self.notes = str(data.get("notes", "") or "")
         self.channel = data.get("channel")
         self.triggers = {}
-        for key in ("scene", "note", "program"):
+        for key in ("scene", "note", "program", "cc"):
             if key in data and data[key] is not None:
                 try:
                     self.triggers[key] = int(data[key])
@@ -44,17 +47,45 @@ class Song:
                     raise SetlistError("song %d (%s): '%s' must be a number"
                                        % (index + 1, self.title, key))
         if not self.triggers:
-            raise SetlistError("song %d (%s) has no 'scene', 'note' or 'program'"
+            raise SetlistError("song %d (%s) has no 'scene', 'note', 'program' or 'cc'"
                                % (index + 1, self.title))
+        self.value = None
+        if data.get("value") is not None:
+            try:
+                self.value = int(data["value"])
+            except (TypeError, ValueError):
+                raise SetlistError("song %d (%s): 'value' must be a number"
+                                   % (index + 1, self.title))
 
     def matches(self, event):
         if self.channel is not None and int(self.channel) != event.channel:
             return False
         want = self.triggers.get(event.kind)
-        return want is not None and want == event.number
+        if want is None or want != event.number:
+            return False
+        if event.kind == "cc":
+            return event.value == self.value if self.value is not None else event.value > 0
+        return True
 
     def trigger_label(self):
-        return ", ".join("%s %d" % (k, v) for k, v in self.triggers.items())
+        parts = []
+        for k, v in self.triggers.items():
+            if k == "cc":
+                parts.append("CC %d" % v + (" = %d" % self.value if self.value is not None else ""))
+            else:
+                parts.append("%s %d" % (k, v))
+        return ", ".join(parts)
+
+    def to_dict(self):
+        """The JSON form of this song: trigger(s) first, then title and notes."""
+        d = dict(self.triggers)
+        d["title"] = self.title
+        d["notes"] = self.notes
+        if self.value is not None:
+            d["value"] = self.value
+        if self.channel is not None:
+            d["channel"] = int(self.channel)
+        return d
 
 
 class Setlist:
@@ -101,6 +132,17 @@ class Setlist:
 
     def __len__(self):
         return len(self.songs)
+
+    def to_dict(self):
+        return {"title": self.title, "songs": [song.to_dict() for song in self.songs]}
+
+    def save(self, path):
+        """Write setlist.json safely: a crash mid-save never leaves a half-written file."""
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(self.to_dict(), f, indent=2, ensure_ascii=False)
+            f.write("\n")
+        os.replace(tmp, path)
 
 
 def write_example(path):

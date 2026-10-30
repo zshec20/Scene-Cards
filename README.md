@@ -87,34 +87,63 @@ choose Open.
 
 ## 2. Write your set list
 
-Open `setlist.json` in *Documents/Scene Cards* (right-click the card > *Edit set list*,
-or press **e**).
-One entry per song, in set order:
+**Double-click the card** (or press **e**) to open the set list editor.
+
+- The list on the left is your set, in order. Use **+ Add song**, **Delete**, **Up** and
+  **Down** to build it.
+- On the right, type the song title, pick what the console sends for that song, and
+  write the notes for the card, one line per item (for example `Drums: up slightly`).
+- Click **Save** (Cmd+S on a Mac, Ctrl+S on Windows). The card updates straight away.
+- Double-clicking the card opens the editor on the song that's showing, so a quick
+  fix during soundcheck is one double-click away.
+
+### Matching songs to the console
+
+Every song has its own trigger, so the card jumps straight to the right song
+whichever order you go in: forward, back, or skipping around. Choose one per song:
+
+| Trigger            | Use it when                                                              |
+| ------------------ | ------------------------------------------------------------------------ |
+| **Scene**          | The normal dLive case: recalling scene 12 shows the song set to scene 12. |
+| **MIDI CC**        | A controller, soft key or playback rig sends a Control Change per song.  |
+| **MIDI note**      | Something sends one Note On per song.                                    |
+| **Program change** | A raw Program Change number, ignoring the bank.                          |
+
+For **MIDI CC** there are two common setups, and both work:
+
+- **A different CC number per song**, for example CC 20 for song 1, CC 21 for song 2.
+  Leave *value* blank and any value above 0 triggers it.
+- **One CC number, a different value per song**, for example CC 30 with value 1 for
+  song 1, value 2 for song 2. Fill in *value*.
+
+Avoid CC 0, 6, 32, 38 and 96-101. The dLive sends those for bank select and for
+fader and parameter moves, so they would fire while you mix. The editor warns you
+if you pick one.
+
+**Don't want to type numbers?** Recall the scene, or press the button that sends the
+CC, then click **Use last from console** in the editor. It fills in whatever just
+arrived. If a scene arrives that has no card yet, the card says so, and
+double-clicking it adds a new card for that scene.
+
+### The file behind it
+
+The editor saves to `setlist.json` in *Documents/Scene Cards*. You never need to open
+it, but it's plain text if you want to: right-click the card and choose
+*Open setlist.json in a text editor*. Save it and the card reloads by itself.
 
 ```json
 {
   "title": "Saturday - Main Stage",
   "songs": [
-    { "scene": 1, "title": "Walk On",  "notes": "House music.\nAll vocal mics muted." },
-    { "scene": 2, "title": "Opener",   "notes": "Unmute vox 1-3 on count-in.\nGTR solo 2:10 -> +3 dB." },
-    { "scene": 3, "title": "Ballad",   "notes": "Long verb on lead vox (FX 2)." }
+    { "scene": 1, "title": "Walk On", "notes": "House music.\nAll vocal mics muted." },
+    { "cc": 20, "title": "Opener", "notes": "Unmute vox 1-3 on count-in." },
+    { "cc": 30, "value": 3, "title": "Ballad", "notes": "Long verb on lead vox (FX 2)." }
   ]
 }
 ```
 
-- `scene` is the dLive scene number (1-500). This is the normal way to use it.
-- `notes` is what shows on the card. Use `\n` for a new line.
-- Save the file and the card reloads by itself. If you make a typo, the card tells
-  you which line.
-- The footer always shows the last MIDI message received, so if you're not sure
-  which scene number a song is, just recall it on the console and read it off the card.
-
-Other triggers, if you ever need them:
-
-- `"note": 60` matches a MIDI Note On (number 0-127). Use this with consoles or
-  playback rigs that send one note per song.
-- `"program": 5` matches a raw Program Change (0-127) ignoring the bank.
-- `"channel": 3` on any song restricts that song to one MIDI channel.
+`"channel": 3` on any song restricts it to one MIDI channel. The Settings window
+also has a channel filter for everything.
 
 ## 3. Connect the dLive
 
@@ -159,7 +188,7 @@ as the port appears.
 | Action                    | How                                   |
 | ------------------------- | ------------------------------------- |
 | Settings                  | Right-click the card, or **s**        |
-| Edit set list             | Right-click > Edit set list, or **e** |
+| Edit set list             | Double-click the card, or **e**       |
 | Step through songs        | **Left / Right** arrow keys           |
 | Bigger / smaller text     | **+** / **-**                         |
 | Keep on top of everything | Click **on top**, or **p**            |
@@ -171,7 +200,8 @@ Window size and position are remembered between runs (saved in `config.json`).
 
 | File                          | What it is                                                 |
 | ----------------------------- | ---------------------------------------------------------- |
-| `scene_cards/app.py`          | The window                                                 |
+| `scene_cards/app.py`          | The card window                                            |
+| `scene_cards/editor.py`       | The set list editor                                        |
 | `scene_cards/midi_events.py`  | Decodes dLive scene recalls from raw MIDI; MIDI port + TCP |
 | `scene_cards/setlist.py`      | Loads and checks `setlist.json`                            |
 | `tests/`                      | Tests: `python3 -m unittest discover -s tests`             |
@@ -189,6 +219,7 @@ Window size and position are remembered between runs (saved in `config.json`).
   installer instead, or run `pipx install git+https://github.com/zshec20/Scene-Cards.git`.
 - **"tkinter is missing"** (Homebrew Python on Mac): `brew install python-tk`.
 - **Card shows "Scene 12 - No card for this scene"**: the console sent scene 12 but
-  there is no entry for it. Add one, or check the MIDI channel in Settings.
+  no song uses it. Double-click the card to add one, or check the MIDI channel in
+  Settings.
 - **Nothing arrives in TCP mode**: ping the MixRack IP from the laptop; the dot stays
   red with the reason while it keeps retrying.
