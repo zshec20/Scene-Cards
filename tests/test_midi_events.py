@@ -3,8 +3,8 @@ import threading
 import time
 import unittest
 
-from midi_events import MidiEvent, MidiParser, TcpSource
-from setlist import Setlist, SetlistError, Song
+from scene_cards.midi_events import MidiEvent, MidiParser, TcpSource
+from scene_cards.setlist import Setlist, SetlistError, Song
 
 
 def collect(data_chunks):

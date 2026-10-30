@@ -6,10 +6,12 @@ Listens for MIDI from an Allen & Heath dLive (or any console) and shows the
 song title + your notes for the scene that was just recalled. Step forward or
 back on the console and the card follows.
 
-Run:   python3 scene_cards.py
-Edit:  setlist.json (next to this file)   - one entry per song / scene
+Run:   scene-cards            (after: pip install git+https://github.com/zshec20/Scene-Cards.git)
+  or:  python3 -m scene_cards (from a downloaded copy of the repo)
+Edit:  Documents/Scene Cards/setlist.json - one entry per song / scene
 """
 
+import argparse
 import json
 import os
 import queue
@@ -24,13 +26,34 @@ except ImportError:  # pragma: no cover
           "Or install Python from python.org, which includes it.")
     sys.exit(1)
 
-from midi_events import (MidiEvent, MidiParser, PortSource, TcpSource,
+from scene_cards.midi_events import (MidiEvent, MidiParser, PortSource, TcpSource,
                          list_midi_ports, midi_library_error)
-from setlist import Setlist, SetlistError, write_example
+from scene_cards.setlist import Setlist, SetlistError, write_example
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.join(HERE, "config.json")
-SETLIST_PATH = os.path.join(HERE, "setlist.json")
+from scene_cards import __version__
+
+
+def default_data_dir():
+    """Where setlist.json and config.json live: Documents/Scene Cards."""
+    env = os.environ.get("SCENE_CARDS_DIR")
+    if env:
+        return os.path.expanduser(env)
+    home = os.path.expanduser("~")
+    docs = os.path.join(home, "Documents")
+    return os.path.join(docs if os.path.isdir(docs) else home, "Scene Cards")
+
+
+DATA_DIR = default_data_dir()
+CONFIG_PATH = os.path.join(DATA_DIR, "config.json")
+SETLIST_PATH = os.path.join(DATA_DIR, "setlist.json")
+
+
+def set_data_dir(path):
+    global DATA_DIR, CONFIG_PATH, SETLIST_PATH
+    DATA_DIR = os.path.abspath(os.path.expanduser(path))
+    CONFIG_PATH = os.path.join(DATA_DIR, "config.json")
+    SETLIST_PATH = os.path.join(DATA_DIR, "setlist.json")
+    os.makedirs(DATA_DIR, exist_ok=True)
 
 DEFAULTS = {
     "source": "midi",            # "midi" = a MIDI port (RTP-MIDI, driver, USB)
@@ -75,7 +98,7 @@ def save_config(cfg):
 def open_in_editor(path):
     try:
         if sys.platform == "darwin":
-            subprocess.Popen(["open", "-t", path])
+            subprocess.Popen(["open", path] if os.path.isdir(path) else ["open", "-t", path])
         elif os.name == "nt":
             os.startfile(path)  # type: ignore[attr-defined]
         else:
@@ -156,6 +179,7 @@ class SceneCardsApp(tk.Tk):
         self.menu.add_command(label="Edit set list (setlist.json)",
                               command=lambda: open_in_editor(SETLIST_PATH))
         self.menu.add_command(label="Reload set list", command=self._load_setlist)
+        self.menu.add_command(label="Show set list folder", command=lambda: open_in_editor(DATA_DIR))
         self.menu.add_separator()
         self.menu.add_command(label="Previous song  (Left)", command=lambda: self.step(-1))
         self.menu.add_command(label="Next song  (Right)", command=lambda: self.step(1))
@@ -498,7 +522,16 @@ class SettingsDialog(tk.Toplevel):
         self.destroy()
 
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        prog="scene-cards",
+        description="Always-on-top set list card that follows dLive scene recalls over MIDI.")
+    parser.add_argument("--data", metavar="FOLDER", default=DATA_DIR,
+                        help="folder for setlist.json and config.json (default: %(default)s)")
+    parser.add_argument("--version", action="version", version="scene-cards " + __version__)
+    args = parser.parse_args(argv)
+    set_data_dir(args.data)
+    print("Scene Cards %s - set list: %s" % (__version__, SETLIST_PATH))
     app = SceneCardsApp()
     app.mainloop()
 

@@ -24,35 +24,57 @@ Works on macOS and Windows.
    includes Tk, which draws the window.
    On a Mac, do this even if `python3 --version` already works: Apple's built-in
    Python 3.9 ships an old Tk that often draws blank or glitchy windows. After
-   installing, run *Install Certificates.command* from the Finder window that opens.
-2. Download this repo: on <https://github.com/zshec20/scene-cards> click the green
-   **Code** button, then **Download ZIP**, and unzip it. Or clone it:
+   installing, run *Install Certificates.command* from the Finder window that opens,
+   then quit and reopen Terminal.
+2. Install Scene Cards with pip:
 
    ```
-   git clone https://github.com/zshec20/scene-cards.git
+   python3 -m pip install git+https://github.com/zshec20/Scene-Cards.git
    ```
 
-3. Double-click **Start Scene Cards.command** (Mac) or **Start Scene Cards.bat**
-   (Windows). The first run installs the two MIDI libraries, then opens the card.
-
-   On a Mac, if it says the file "can't be opened", right-click it and choose Open,
-   or in Terminal run:
+   If you don't have git, this does the same thing from a zip:
 
    ```
-   cd ~/Desktop/scene-cards
-   chmod +x "Start Scene Cards.command"
+   python3 -m pip install https://github.com/zshec20/Scene-Cards/archive/refs/heads/main.zip
    ```
 
-   Or from a terminal on any system:
+3. Start it:
 
    ```
-   pip install -r requirements.txt
-   python3 scene_cards.py
+   scene-cards
    ```
+
+   If Terminal says `command not found`, use `python3 -m scene_cards` instead.
+
+To update to the latest version later, run the same pip command with `--upgrade`
+added after `install`. To remove it: `python3 -m pip uninstall scene-cards`.
+
+### Your files
+
+The first run creates a **Scene Cards** folder in your **Documents** folder:
+
+- `setlist.json` holds your songs. Edit this.
+- `config.json` holds your settings, window size and position.
+
+Right-click the card and choose *Show set list folder* to jump there. Updating or
+reinstalling the app never touches these files. To keep a different set list per
+show, point the app at another folder:
+
+```
+scene-cards --data ~/Documents/"Scene Cards - Main Stage"
+```
+
+### Without pip
+
+Download the repo (green **Code** button, then **Download ZIP**), unzip it, and
+double-click **Start Scene Cards.command** (Mac) or **Start Scene Cards.bat**
+(Windows). On a Mac, if it says the file "can't be opened", right-click it and
+choose Open.
 
 ## 2. Write your set list
 
-Open `setlist.json` (right-click the card > *Edit set list*, or press **e**).
+Open `setlist.json` in *Documents/Scene Cards* (right-click the card > *Edit set list*,
+or press **e**).
 One entry per song, in set order:
 
 ```json
@@ -129,24 +151,27 @@ as the port appears.
 | Keep on top of everything | Click **on top**, or **p**            |
 | Opacity, MIDI channel     | Settings                              |
 
-Window size and position are remembered between runs (saved in `config.json`
-next to the script).
+Window size and position are remembered between runs (saved in `config.json`).
 
 ## Files
 
-| File                  | What it is                                                   |
-| --------------------- | ------------------------------------------------------------ |
-| `scene_cards.py`      | The window. Run this.                                        |
-| `setlist.json`        | Your songs. Edit this.                                       |
-| `midi_events.py`      | Decodes dLive scene recalls from raw MIDI; MIDI port + TCP   |
-| `setlist.py`          | Loads and checks `setlist.json`                              |
-| `test_midi_events.py` | Tests: `python3 -m unittest test_midi_events`                |
-| `requirements.txt`    | `mido` and `python-rtmidi`, only needed for MIDI-port mode   |
+| File                          | What it is                                                 |
+| ----------------------------- | ---------------------------------------------------------- |
+| `scene_cards/app.py`          | The window                                                 |
+| `scene_cards/midi_events.py`  | Decodes dLive scene recalls from raw MIDI; MIDI port + TCP |
+| `scene_cards/setlist.py`      | Loads and checks `setlist.json`                            |
+| `tests/`                      | Tests: `python3 -m unittest discover -s tests`             |
+| `pyproject.toml`              | Makes the repo pip-installable                             |
+| `requirements.txt`            | `mido` and `python-rtmidi`, for the no-pip launchers       |
 
 ## Troubleshooting
 
 - **"MIDI library not available"**: run `pip install mido python-rtmidi`. TCP mode
   works without it.
+- **`scene-cards: command not found`**: run `python3 -m scene_cards` instead. Or quit
+  and reopen Terminal, which picks up the newly installed command.
+- **pip says "externally-managed-environment"** (Homebrew Python): use the python.org
+  installer instead, or run `pipx install git+https://github.com/zshec20/Scene-Cards.git`.
 - **"tkinter is missing"** (Homebrew Python on Mac): `brew install python-tk`.
 - **Card shows "Scene 12 - No card for this scene"**: the console sent scene 12 but
   there is no entry for it. Add one, or check the MIDI channel in Settings.

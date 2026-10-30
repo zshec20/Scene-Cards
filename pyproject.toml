@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scene-cards"
+dynamic = ["version"]
+description = "Always-on-top set list note card that follows Allen & Heath dLive scene recalls over MIDI"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Zach" }]
+dependencies = [
+    "mido>=1.3",
+    "python-rtmidi>=1.5",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Topic :: Multimedia :: Sound/Audio :: MIDI",
+]
+
+[project.urls]
+Homepage = "https://github.com/zshec20/Scene-Cards"
+
+[project.scripts]
+scene-cards = "scene_cards.app:main"
+
+[tool.setuptools]
+packages = ["scene_cards"]
+
+[tool.setuptools.dynamic]
+version = { attr = "scene_cards.__version__" }
